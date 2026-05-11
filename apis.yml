@@ -1,0 +1,92 @@
+aid: mqtt
+name: MQTT
+description: >-
+  MQTT (Message Queuing Telemetry Transport) is an OASIS-standard, lightweight
+  publish/subscribe messaging transport protocol designed for constrained
+  devices and low-bandwidth, high-latency, or unreliable networks, making it
+  the de-facto messaging protocol for IoT and machine-to-machine (M2M)
+  communication. MQTT is a protocol specification rather than a hosted API:
+  clients connect over TCP/TLS (typically port 1883 or 8883) or WebSocket
+  (8080/8081) to an MQTT broker (such as Mosquitto, HiveMQ, EMQX, or AWS IoT
+  Core) and exchange CONNECT, PUBLISH, SUBSCRIBE, and other control packets
+  defined by the standard. The current standard is MQTT Version 5.0
+  (OASIS Standard, 7 March 2019); MQTT 3.1.1 remains widely deployed.
+type: Index
+image: https://kinlane-productions.s3.amazonaws.com/apis-json/apis-json-logo.jpg
+tags:
+  - MQTT
+  - Messaging
+  - Publish Subscribe
+  - IoT
+  - M2M
+  - Protocol
+  - OASIS Standard
+  - Telemetry
+url: >-
+  https://raw.githubusercontent.com/api-evangelist/mqtt/refs/heads/main/apis.yml
+created: '2026-05-11'
+modified: '2026-05-11'
+specificationVersion: '0.19'
+apis:
+  - aid: mqtt:protocol-v5
+    name: MQTT Version 5.0 Protocol
+    description: >-
+      OASIS Standard publish/subscribe messaging protocol for IoT and M2M
+      communication. MQTT v5.0 defines the wire format and behavior of
+      CONNECT, PUBLISH, SUBSCRIBE, UNSUBSCRIBE, PINGREQ, DISCONNECT and other
+      control packets exchanged between MQTT clients and brokers over TCP
+      (typically 1883, or 8883 with TLS) or WebSockets. Authentication is
+      broker-specific and may include username/password, X.509 client
+      certificates, or OAuth/JWT enhanced authentication.
+    humanURL: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
+    baseURL: mqtt://broker.example.com:1883
+    tags:
+      - MQTT 5.0
+      - Protocol
+      - Publish Subscribe
+      - OASIS
+      - IoT
+    properties:
+      - type: Specification
+        url: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
+      - type: Specification PDF
+        url: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.pdf
+      - type: OASIS Standard Page
+        url: https://www.oasis-open.org/standard/mqtt-v5-0-os/
+      - type: Specifications Index
+        url: https://mqtt.org/mqtt-specification/
+  - aid: mqtt:protocol-v3-1-1
+    name: MQTT Version 3.1.1 Protocol
+    description: >-
+      Previous OASIS Standard version of MQTT, still widely deployed across
+      IoT brokers, devices, and cloud platforms. MQTT 3.1.1 defines the
+      publish/subscribe messaging semantics, QoS levels 0/1/2, retained
+      messages, and last-will-and-testament that are inherited and extended
+      by MQTT 5.0.
+    humanURL: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
+    baseURL: mqtt://broker.example.com:1883
+    tags:
+      - MQTT 3.1.1
+      - Protocol
+      - Publish Subscribe
+      - OASIS
+      - IoT
+    properties:
+      - type: Specification
+        url: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
+      - type: Specification PDF
+        url: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf
+
+common:
+  - type: Website
+    url: https://mqtt.org
+  - type: Specifications
+    url: https://mqtt.org/mqtt-specification/
+  - type: OASIS Technical Committee
+    url: https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=mqtt
+  - type: Software Listings
+    url: https://mqtt.org/software/
+
+maintainers:
+  - FN: Kin Lane
+    email: kin@apievangelist.com
