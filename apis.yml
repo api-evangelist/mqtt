@@ -78,6 +78,8 @@ apis:
         url: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf
 
 common:
+  - type: GitHubOrganization
+    url: https://github.com/mqtt
   - type: Website
     url: https://mqtt.org
   - type: Specifications
