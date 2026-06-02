@@ -25,7 +25,7 @@ tags:
 url: >-
   https://raw.githubusercontent.com/api-evangelist/mqtt/refs/heads/main/apis.yml
 created: '2026-05-11'
-modified: '2026-05-11'
+modified: '2026-05-30'
 specificationVersion: '0.19'
 apis:
   - aid: mqtt:protocol-v5
@@ -55,6 +55,8 @@ apis:
         url: https://www.oasis-open.org/standard/mqtt-v5-0-os/
       - type: Specifications Index
         url: https://mqtt.org/mqtt-specification/
+      - type: AsyncAPI
+        url: https://raw.githubusercontent.com/api-evangelist/mqtt/refs/heads/main/asyncapi.yml
   - aid: mqtt:protocol-v3-1-1
     name: MQTT Version 3.1.1 Protocol
     description: >-

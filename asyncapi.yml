@@ -1,0 +1,1137 @@
+asyncapi: 2.6.0
+info:
+  title: MQTT Version 5.0 Protocol (Reference AsyncAPI)
+  version: '5.0.0'
+  description: >-
+    Reference AsyncAPI 2.6 description of the MQTT Version 5.0 protocol itself
+    (OASIS Standard, 7 March 2019). This document models the generic
+    publish/subscribe surface that every conformant MQTT 5.0 broker exposes:
+    a TCP (or WebSocket) endpoint that clients connect to, a topic namespace
+    that clients publish to and subscribe to (with `+` single-level and `#`
+    multi-level wildcards), and the fifteen MQTT control packets exchanged
+    on the wire.
+
+
+    MQTT 5.0 Control Packets (Section 3 of the OASIS specification):
+
+      * CONNECT       (1) — client request to connect to a server
+      * CONNACK       (2) — server acknowledgement of CONNECT
+      * PUBLISH       (3) — publish message
+      * PUBACK        (4) — publish acknowledgement (QoS 1)
+      * PUBREC        (5) — publish received (QoS 2 delivery part 1)
+      * PUBREL        (6) — publish release  (QoS 2 delivery part 2)
+      * PUBCOMP       (7) — publish complete (QoS 2 delivery part 3)
+      * SUBSCRIBE     (8) — subscribe request
+      * SUBACK        (9) — subscribe acknowledgement
+      * UNSUBSCRIBE  (10) — unsubscribe request
+      * UNSUBACK     (11) — unsubscribe acknowledgement
+      * PINGREQ      (12) — PING request
+      * PINGRESP     (13) — PING response
+      * DISCONNECT   (14) — disconnect notification
+      * AUTH         (15) — authentication exchange
+
+
+    Quality of Service (Section 4.3):
+
+      * QoS 0 — at most once delivery, fire and forget (PUBLISH only).
+      * QoS 1 — at least once delivery (PUBLISH + PUBACK).
+      * QoS 2 — exactly once delivery (PUBLISH + PUBREC + PUBREL + PUBCOMP).
+
+
+    Retained messages (Section 3.3.1.3) and the Will Message (Section 3.1.2.5)
+    are described via the AsyncAPI MQTT bindings on the server and on the
+    relevant operations / messages.
+
+
+    This is a protocol-level reference document. Application-specific topic
+    structures, payload schemas, and authorization policies are
+    broker-deployment and use-case specific.
+  contact:
+    name: API Evangelist
+    url: https://apievangelist.com
+    email: kin@apievangelist.com
+  license:
+    name: OASIS Standard (MQTT Version 5.0)
+    url: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
+  x-source-documentation:
+    - https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
+    - https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.pdf
+    - https://mqtt.org/mqtt-specification/
+
+defaultContentType: application/octet-stream
+
+servers:
+  broker:
+    url: '{broker}:{port}'
+    protocol: mqtt
+    protocolVersion: '5.0.0'
+    description: >-
+      Generic MQTT 5.0 broker endpoint. Replace `{broker}` with the host name
+      of the deployed broker (e.g. `broker.hivemq.com`, `test.mosquitto.org`,
+      `a1b2c3d4.iot.us-east-1.amazonaws.com`). Default TCP port for plaintext
+      MQTT is 1883; use the `secure-broker` server template for TLS on 8883.
+    variables:
+      broker:
+        default: broker.example.com
+        description: >-
+          Hostname or IP address of the MQTT broker. Brokers are deployed by
+          operators and are not part of the MQTT specification itself.
+      port:
+        default: '1883'
+        enum:
+          - '1883'
+          - '8883'
+        description: >-
+          TCP port. 1883 for plaintext MQTT, 8883 for MQTT over TLS. Brokers
+          MAY listen on other ports per local policy.
+    security:
+      - userPassword: []
+      - X509: []
+      - enhancedAuth: []
+    bindings:
+      mqtt:
+        clientId: 'mqtt-client-{random}'
+        cleanSession: true
+        keepAlive: 60
+        lastWill:
+          topic: clients/{clientId}/status
+          qos: 1
+          message: '{"state":"offline"}'
+          retain: true
+        bindingVersion: '0.2.0'
+
+  secure-broker:
+    url: '{broker}:{port}'
+    protocol: secure-mqtt
+    protocolVersion: '5.0.0'
+    description: >-
+      Generic MQTT 5.0 broker endpoint over TLS (MQTT-over-TLS, default port
+      8883). Identical semantics to the plaintext `broker` server; the
+      transport is wrapped in TLS per OASIS recommendation for any
+      Internet-exposed broker.
+    variables:
+      broker:
+        default: broker.example.com
+        description: Hostname or IP address of the MQTT broker.
+      port:
+        default: '8883'
+        enum:
+          - '8883'
+        description: TCP port for MQTT over TLS.
+    security:
+      - userPassword: []
+      - X509: []
+      - enhancedAuth: []
+    bindings:
+      mqtt:
+        clientId: 'mqtt-client-{random}'
+        cleanSession: true
+        keepAlive: 60
+        bindingVersion: '0.2.0'
+
+  websocket-broker:
+    url: '{broker}:{port}{path}'
+    protocol: mqtt
+    protocolVersion: '5.0.0'
+    description: >-
+      MQTT 5.0 carried over WebSockets (typical browser-side deployment).
+      The MQTT specification does not mandate a port or path for WebSocket
+      transport; common defaults are 8080 (plain) or 8081/443 (TLS) on
+      `/mqtt`.
+    variables:
+      broker:
+        default: broker.example.com
+        description: Hostname of the MQTT-over-WebSockets endpoint.
+      port:
+        default: '8080'
+        description: TCP port serving the WebSocket upgrade.
+      path:
+        default: /mqtt
+        description: Request path used for the WebSocket upgrade handshake.
+    bindings:
+      mqtt:
+        clientId: 'mqtt-client-{random}'
+        cleanSession: true
+        keepAlive: 60
+        bindingVersion: '0.2.0'
+
+channels:
+  # ---------------------------------------------------------------------
+  # Generic topic surface. MQTT 5.0 does not predefine application topics;
+  # the channels below describe the SHAPE of the publish/subscribe surface:
+  # an exact topic, a single-level wildcard (`+`), and a multi-level
+  # wildcard (`#`). They are intended to be specialized per deployment.
+  # ---------------------------------------------------------------------
+
+  'topic/{topicName}':
+    description: >-
+      An MQTT 5.0 Application Message published to a specific topic name.
+      Topic names are UTF-8 strings with `/` topic-level separators and MUST
+      NOT contain wildcard characters (`+`, `#`) when used as a publish
+      destination (Section 4.7.1).
+    parameters:
+      topicName:
+        description: >-
+          The Topic Name of the PUBLISH packet (MQTT 5.0 Section 3.3.2.1).
+          Topic Names are UTF-8 encoded strings, 1 to 65,535 bytes, MUST
+          NOT contain wildcards.
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 65535
+          pattern: '^[^+#]+$'
+    publish:
+      operationId: publishApplicationMessage
+      summary: Publish an Application Message (PUBLISH).
+      description: >-
+        Send a PUBLISH control packet (Section 3.3) to the broker for the
+        named topic. The broker forwards the Application Message to every
+        client whose subscription topic filter matches.
+      bindings:
+        mqtt:
+          qos: 0
+          retain: false
+          bindingVersion: '0.2.0'
+      message:
+        oneOf:
+          - $ref: '#/components/messages/PUBLISH'
+    subscribe:
+      operationId: receiveApplicationMessage
+      summary: Receive an Application Message (PUBLISH from broker).
+      description: >-
+        Receive a PUBLISH control packet from the broker for any topic name
+        matching a previously installed Subscription (Section 3.8 / 4.7).
+      bindings:
+        mqtt:
+          qos: 0
+          retain: false
+          bindingVersion: '0.2.0'
+      message:
+        oneOf:
+          - $ref: '#/components/messages/PUBLISH'
+
+  'filter/{topicFilter}':
+    description: >-
+      An MQTT 5.0 Subscription Topic Filter (Section 4.7). Topic Filters
+      MAY contain the single-level wildcard `+` and the multi-level
+      wildcard `#`. `#` MUST be the last character and MUST follow a `/`.
+      `+` matches exactly one topic level.
+
+
+      Examples:
+
+        * `sensor/+/temperature` — any single sensor's temperature.
+        * `sensor/#`             — every topic under `sensor/`.
+        * `$SYS/#`               — broker-internal status topics (common
+                                   but broker-specific).
+    parameters:
+      topicFilter:
+        description: >-
+          A Topic Filter string sent in a SUBSCRIBE packet
+          (Section 3.8.3.1). MAY contain `+` or `#` wildcards per
+          Section 4.7.1.
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 65535
+          examples:
+            - 'sensor/+/temperature'
+            - 'sensor/#'
+            - 'devices/+/commands/#'
+    subscribe:
+      operationId: subscribeToTopicFilter
+      summary: SUBSCRIBE to a Topic Filter.
+      description: >-
+        Install a Subscription on the broker. Sends a SUBSCRIBE packet
+        (Section 3.8) carrying one or more Topic Filters and Subscription
+        Options (QoS, No Local, Retain As Published, Retain Handling).
+        The broker replies with SUBACK (Section 3.9) containing a Reason
+        Code per filter. Subsequent matching PUBLISH packets are forwarded
+        to the client until UNSUBSCRIBE.
+      bindings:
+        mqtt:
+          qos: 1
+          bindingVersion: '0.2.0'
+      message:
+        oneOf:
+          - $ref: '#/components/messages/SUBSCRIBE'
+          - $ref: '#/components/messages/SUBACK'
+          - $ref: '#/components/messages/UNSUBSCRIBE'
+          - $ref: '#/components/messages/UNSUBACK'
+
+  '$control':
+    description: >-
+      Logical channel for MQTT 5.0 control-plane packet exchanges that are
+      not associated with a topic — connection setup/teardown, liveness
+      pings, QoS acknowledgements, and enhanced authentication. AsyncAPI
+      does not have a first-class concept for non-topic packets; this
+      channel groups them for documentation purposes.
+    publish:
+      operationId: sendControlPacket
+      summary: Client-to-broker control packets.
+      description: >-
+        CONNECT, PUBACK, PUBREC, PUBREL, PUBCOMP, PINGREQ, DISCONNECT, AUTH
+        sent by the client.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/CONNECT'
+          - $ref: '#/components/messages/PUBACK'
+          - $ref: '#/components/messages/PUBREC'
+          - $ref: '#/components/messages/PUBREL'
+          - $ref: '#/components/messages/PUBCOMP'
+          - $ref: '#/components/messages/PINGREQ'
+          - $ref: '#/components/messages/DISCONNECT'
+          - $ref: '#/components/messages/AUTH'
+    subscribe:
+      operationId: receiveControlPacket
+      summary: Broker-to-client control packets.
+      description: >-
+        CONNACK, PUBACK, PUBREC, PUBREL, PUBCOMP, PINGRESP, DISCONNECT,
+        AUTH sent by the broker. PUBACK / PUBREC / PUBREL / PUBCOMP flow
+        in both directions to ack the matching QoS 1/2 PUBLISH.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/CONNACK'
+          - $ref: '#/components/messages/PUBACK'
+          - $ref: '#/components/messages/PUBREC'
+          - $ref: '#/components/messages/PUBREL'
+          - $ref: '#/components/messages/PUBCOMP'
+          - $ref: '#/components/messages/PINGRESP'
+          - $ref: '#/components/messages/DISCONNECT'
+          - $ref: '#/components/messages/AUTH'
+
+components:
+  messages:
+    # =========================================================================
+    # MQTT 5.0 Control Packets (Section 3 of OASIS mqtt-v5.0)
+    # =========================================================================
+
+    CONNECT:
+      name: CONNECT
+      title: CONNECT (Control Packet type 1)
+      summary: Client request to connect to a Server.
+      description: >-
+        Section 3.1. After a Network Connection is established by a Client to
+        a Server, the first packet sent from the Client to the Server MUST
+        be a CONNECT packet. The Client MUST NOT send more than one CONNECT
+        packet on a Network Connection.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/CONNECTPacket'
+
+    CONNACK:
+      name: CONNACK
+      title: CONNACK (Control Packet type 2)
+      summary: Connect acknowledgement.
+      description: >-
+        Section 3.2. The CONNACK packet is the packet sent by the Server in
+        response to a CONNECT packet received from a Client. The Server MUST
+        send a CONNACK with a 0x00 (Success) Reason Code before sending any
+        packet other than AUTH.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/CONNACKPacket'
+
+    PUBLISH:
+      name: PUBLISH
+      title: PUBLISH (Control Packet type 3)
+      summary: Publish an Application Message.
+      description: >-
+        Section 3.3. A PUBLISH packet is sent from a Client to a Server or
+        from a Server to a Client to transport an Application Message. The
+        Topic Name, QoS, Retain flag, Payload, and (in MQTT 5) Properties
+        (Payload Format Indicator, Message Expiry Interval, Topic Alias,
+        Response Topic, Correlation Data, User Properties, Subscription
+        Identifier, Content Type) are carried here.
+      contentType: application/octet-stream
+      headers:
+        $ref: '#/components/schemas/PUBLISHProperties'
+      bindings:
+        mqtt:
+          bindingVersion: '0.2.0'
+      payload:
+        $ref: '#/components/schemas/PUBLISHPacket'
+
+    PUBACK:
+      name: PUBACK
+      title: PUBACK (Control Packet type 4)
+      summary: Publish acknowledgement (QoS 1).
+      description: >-
+        Section 3.4. A PUBACK packet is the response to a PUBLISH packet with
+        QoS 1. Carries a Packet Identifier and a Reason Code (0x00 Success,
+        0x10 No matching subscribers, 0x80 Unspecified error, 0x83 Implementation
+        specific error, 0x87 Not authorized, 0x90 Topic Name invalid, 0x91
+        Packet identifier in use, 0x97 Quota exceeded, 0x99 Payload format
+        invalid).
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/PUBACKPacket'
+
+    PUBREC:
+      name: PUBREC
+      title: PUBREC (Control Packet type 5)
+      summary: Publish received (QoS 2 delivery part 1).
+      description: >-
+        Section 3.5. A PUBREC packet is the response to a PUBLISH packet with
+        QoS 2. It is the second packet of the QoS 2 protocol exchange.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/PUBRECPacket'
+
+    PUBREL:
+      name: PUBREL
+      title: PUBREL (Control Packet type 6)
+      summary: Publish release (QoS 2 delivery part 2).
+      description: >-
+        Section 3.6. A PUBREL packet is the response to a PUBREC packet. It
+        is the third packet of the QoS 2 protocol exchange.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/PUBRELPacket'
+
+    PUBCOMP:
+      name: PUBCOMP
+      title: PUBCOMP (Control Packet type 7)
+      summary: Publish complete (QoS 2 delivery part 3).
+      description: >-
+        Section 3.7. The PUBCOMP packet is the response to a PUBREL packet.
+        It is the fourth and final packet of the QoS 2 protocol exchange.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/PUBCOMPPacket'
+
+    SUBSCRIBE:
+      name: SUBSCRIBE
+      title: SUBSCRIBE (Control Packet type 8)
+      summary: Subscribe request.
+      description: >-
+        Section 3.8. The SUBSCRIBE packet is sent from the Client to the
+        Server to create one or more Subscriptions. Each Subscription
+        registers a Topic Filter together with Subscription Options
+        (Maximum QoS, No Local, Retain As Published, Retain Handling) and
+        (optionally) a Subscription Identifier.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/SUBSCRIBEPacket'
+
+    SUBACK:
+      name: SUBACK
+      title: SUBACK (Control Packet type 9)
+      summary: Subscribe acknowledgement.
+      description: >-
+        Section 3.9. The SUBACK packet is sent by the Server to the Client to
+        confirm receipt and processing of a SUBSCRIBE packet. Contains a
+        Reason Code for each Topic Filter in the corresponding SUBSCRIBE
+        packet, indicating the granted maximum QoS or a failure code.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/SUBACKPacket'
+
+    UNSUBSCRIBE:
+      name: UNSUBSCRIBE
+      title: UNSUBSCRIBE (Control Packet type 10)
+      summary: Unsubscribe request.
+      description: >-
+        Section 3.10. An UNSUBSCRIBE packet is sent by the Client to the
+        Server, to unsubscribe from topics.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/UNSUBSCRIBEPacket'
+
+    UNSUBACK:
+      name: UNSUBACK
+      title: UNSUBACK (Control Packet type 11)
+      summary: Unsubscribe acknowledgement.
+      description: >-
+        Section 3.11. The UNSUBACK packet is sent by the Server to the Client
+        to confirm receipt of an UNSUBSCRIBE packet. Contains one Reason
+        Code per Topic Filter in the original UNSUBSCRIBE.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/UNSUBACKPacket'
+
+    PINGREQ:
+      name: PINGREQ
+      title: PINGREQ (Control Packet type 12)
+      summary: PING request.
+      description: >-
+        Section 3.12. The PINGREQ packet is sent from a Client to the Server.
+        It is used to indicate to the Server that the Client is alive in the
+        absence of any other Control Packets being sent from the Client to
+        the Server, request that the Server responds to confirm it is alive,
+        and exercise the network to indicate that the Network Connection is
+        active. Contains no Variable Header or Payload.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/PINGREQPacket'
+
+    PINGRESP:
+      name: PINGRESP
+      title: PINGRESP (Control Packet type 13)
+      summary: PING response.
+      description: >-
+        Section 3.13. A PINGRESP packet is sent by the Server to the Client
+        in response to a PINGREQ packet. It indicates that the Server is
+        alive. Contains no Variable Header or Payload.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/PINGRESPPacket'
+
+    DISCONNECT:
+      name: DISCONNECT
+      title: DISCONNECT (Control Packet type 14)
+      summary: Disconnect notification.
+      description: >-
+        Section 3.14. The DISCONNECT packet is the final MQTT Control Packet
+        sent from the Client or the Server. It indicates the reason why the
+        Network Connection is being closed. In MQTT 5.0 (unlike 3.1.1) the
+        Server MAY send a DISCONNECT to the Client. Carries a Reason Code
+        and Properties (Session Expiry Interval, Reason String, User
+        Properties, Server Reference).
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/DISCONNECTPacket'
+
+    AUTH:
+      name: AUTH
+      title: AUTH (Control Packet type 15)
+      summary: Authentication exchange (MQTT 5.0 only).
+      description: >-
+        Section 3.15. An AUTH packet is sent from Client to Server or Server
+        to Client as part of an extended authentication exchange, such as
+        challenge/response authentication. It is a Protocol Error for the
+        Client or Server to send an AUTH packet if the CONNECT packet did
+        not contain the same Authentication Method.
+      contentType: application/octet-stream
+      payload:
+        $ref: '#/components/schemas/AUTHPacket'
+
+  # ==========================================================================
+  # Schemas — these are JSON Schema descriptions of the packet *structure*.
+  # The wire format is binary per Section 1.5 / Section 2 of the OASIS spec;
+  # the schemas below name the fields and properties carried by each packet
+  # so that tooling can render documentation.
+  # ==========================================================================
+  schemas:
+    FixedHeader:
+      type: object
+      description: >-
+        Section 2.1. Each MQTT Control Packet contains a Fixed Header. The
+        first byte encodes the Control Packet type (bits 7-4) and type-specific
+        flags (bits 3-0), followed by the Remaining Length (Variable Byte
+        Integer, 1-4 bytes).
+      properties:
+        controlPacketType:
+          type: integer
+          minimum: 1
+          maximum: 15
+          description: MQTT Control Packet type (1=CONNECT, ..., 15=AUTH).
+        flags:
+          type: integer
+          minimum: 0
+          maximum: 15
+          description: Flags specific to each MQTT Control Packet type.
+        remainingLength:
+          type: integer
+          minimum: 0
+          maximum: 268435455
+          description: >-
+            Variable Byte Integer representing the number of bytes remaining
+            within the current Control Packet, including data in the Variable
+            Header and the Payload (Section 1.5.5).
+
+    UserProperty:
+      type: object
+      description: >-
+        MQTT 5.0 User Property (Section 2.2.2.2). UTF-8 String Pair.
+      required: [key, value]
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+
+    CONNECTPacket:
+      type: object
+      description: CONNECT packet structure (Section 3.1).
+      required: [fixedHeader, protocolName, protocolVersion, clientIdentifier]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        protocolName:
+          type: string
+          enum: ['MQTT']
+          description: 'Section 3.1.2.1. UTF-8 encoded string "MQTT".'
+        protocolVersion:
+          type: integer
+          enum: [5]
+          description: 'Section 3.1.2.2. The value of the Protocol Version field for MQTT 5.0 is 5 (0x05).'
+        connectFlags:
+          type: object
+          description: 'Section 3.1.2.3. Connect Flags byte.'
+          properties:
+            userNameFlag:
+              type: boolean
+            passwordFlag:
+              type: boolean
+            willRetain:
+              type: boolean
+            willQoS:
+              type: integer
+              enum: [0, 1, 2]
+            willFlag:
+              type: boolean
+            cleanStart:
+              type: boolean
+              description: 'Section 3.1.2.4. Clean Start (replaces Clean Session from 3.1.1).'
+        keepAlive:
+          type: integer
+          minimum: 0
+          maximum: 65535
+          description: 'Section 3.1.2.10. Time interval (seconds) for the Keep Alive.'
+        properties:
+          type: object
+          description: 'Section 3.1.2.11. CONNECT Properties.'
+          properties:
+            sessionExpiryInterval:
+              type: integer
+              minimum: 0
+              maximum: 4294967295
+            receiveMaximum:
+              type: integer
+              minimum: 1
+              maximum: 65535
+            maximumPacketSize:
+              type: integer
+            topicAliasMaximum:
+              type: integer
+              minimum: 0
+              maximum: 65535
+            requestResponseInformation:
+              type: integer
+              enum: [0, 1]
+            requestProblemInformation:
+              type: integer
+              enum: [0, 1]
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+            authenticationMethod:
+              type: string
+            authenticationData:
+              type: string
+              format: byte
+        clientIdentifier:
+          type: string
+          description: 'Section 3.1.3.1. UTF-8 encoded Client Identifier.'
+        willProperties:
+          type: object
+          description: 'Section 3.1.3.2. Will Properties (when Will Flag is set).'
+        willTopic:
+          type: string
+          description: 'Section 3.1.3.3. UTF-8 encoded Will Topic.'
+        willPayload:
+          type: string
+          format: byte
+          description: 'Section 3.1.3.4. The Will Payload.'
+        userName:
+          type: string
+          description: 'Section 3.1.3.5. UTF-8 encoded User Name.'
+        password:
+          type: string
+          format: byte
+          description: 'Section 3.1.3.6. Binary Data containing the Password.'
+
+    CONNACKPacket:
+      type: object
+      description: CONNACK packet structure (Section 3.2).
+      required: [fixedHeader, connectAcknowledgeFlags, reasonCode]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        connectAcknowledgeFlags:
+          type: object
+          properties:
+            sessionPresent:
+              type: boolean
+              description: 'Section 3.2.2.1.1. Session Present flag.'
+        reasonCode:
+          type: integer
+          description: >-
+            Section 3.2.2.2. Connect Reason Code. 0x00 Success; 0x80 Unspecified
+            error; 0x81 Malformed Packet; 0x82 Protocol Error; 0x83
+            Implementation specific error; 0x84 Unsupported Protocol Version;
+            0x85 Client Identifier not valid; 0x86 Bad User Name or Password;
+            0x87 Not authorized; 0x88 Server unavailable; 0x89 Server busy;
+            0x8A Banned; 0x8C Bad authentication method; 0x90 Topic Name
+            invalid; 0x95 Packet too large; 0x97 Quota exceeded; 0x99 Payload
+            format invalid; 0x9A Retain not supported; 0x9B QoS not supported;
+            0x9C Use another server; 0x9D Server moved; 0x9F Connection rate
+            exceeded.
+        properties:
+          type: object
+          description: 'Section 3.2.2.3. CONNACK Properties.'
+          properties:
+            sessionExpiryInterval:
+              type: integer
+            receiveMaximum:
+              type: integer
+            maximumQoS:
+              type: integer
+              enum: [0, 1, 2]
+            retainAvailable:
+              type: integer
+              enum: [0, 1]
+            maximumPacketSize:
+              type: integer
+            assignedClientIdentifier:
+              type: string
+            topicAliasMaximum:
+              type: integer
+            reasonString:
+              type: string
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+            wildcardSubscriptionAvailable:
+              type: integer
+              enum: [0, 1]
+            subscriptionIdentifiersAvailable:
+              type: integer
+              enum: [0, 1]
+            sharedSubscriptionAvailable:
+              type: integer
+              enum: [0, 1]
+            serverKeepAlive:
+              type: integer
+            responseInformation:
+              type: string
+            serverReference:
+              type: string
+            authenticationMethod:
+              type: string
+            authenticationData:
+              type: string
+              format: byte
+
+    PUBLISHProperties:
+      type: object
+      description: >-
+        PUBLISH Variable Header Properties (Section 3.3.2.3) plus the
+        Topic Name, Packet Identifier, and flags carried by every PUBLISH.
+      properties:
+        topicName:
+          type: string
+          description: 'Section 3.3.2.1. UTF-8 encoded Topic Name (no wildcards).'
+        packetIdentifier:
+          type: integer
+          minimum: 1
+          maximum: 65535
+          description: 'Section 3.3.2.2. Present only when QoS > 0.'
+        dup:
+          type: boolean
+          description: 'Section 3.3.1.1. DUP flag.'
+        qos:
+          type: integer
+          enum: [0, 1, 2]
+          description: 'Section 3.3.1.2. QoS level.'
+        retain:
+          type: boolean
+          description: 'Section 3.3.1.3. RETAIN flag.'
+        payloadFormatIndicator:
+          type: integer
+          enum: [0, 1]
+          description: '0 = bytes; 1 = UTF-8 encoded character data.'
+        messageExpiryInterval:
+          type: integer
+        topicAlias:
+          type: integer
+        responseTopic:
+          type: string
+        correlationData:
+          type: string
+          format: byte
+        userProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProperty'
+        subscriptionIdentifier:
+          type: integer
+        contentType:
+          type: string
+
+    PUBLISHPacket:
+      type: object
+      description: >-
+        PUBLISH packet (Section 3.3). The Payload contains the Application
+        Message that is being published. The content and format of the data
+        is application specific.
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        variableHeader:
+          $ref: '#/components/schemas/PUBLISHProperties'
+        payload:
+          description: >-
+            The Application Message payload (Section 3.3.3). Opaque to MQTT.
+          oneOf:
+            - type: string
+            - type: string
+              format: byte
+            - type: object
+
+    PUBACKPacket:
+      type: object
+      description: PUBACK packet (Section 3.4).
+      required: [fixedHeader, packetIdentifier]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        packetIdentifier:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        reasonCode:
+          type: integer
+          description: '0x00 Success; 0x10 No matching subscribers; 0x80, 0x83, 0x87, 0x90, 0x91, 0x97, 0x99.'
+        properties:
+          type: object
+          properties:
+            reasonString:
+              type: string
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+
+    PUBRECPacket:
+      type: object
+      description: PUBREC packet (Section 3.5).
+      required: [fixedHeader, packetIdentifier]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        packetIdentifier:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        reasonCode:
+          type: integer
+        properties:
+          type: object
+          properties:
+            reasonString:
+              type: string
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+
+    PUBRELPacket:
+      type: object
+      description: PUBREL packet (Section 3.6). Fixed Header flags MUST be 0b0010.
+      required: [fixedHeader, packetIdentifier]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        packetIdentifier:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        reasonCode:
+          type: integer
+          description: '0x00 Success; 0x92 Packet Identifier not found.'
+        properties:
+          type: object
+          properties:
+            reasonString:
+              type: string
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+
+    PUBCOMPPacket:
+      type: object
+      description: PUBCOMP packet (Section 3.7).
+      required: [fixedHeader, packetIdentifier]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        packetIdentifier:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        reasonCode:
+          type: integer
+          description: '0x00 Success; 0x92 Packet Identifier not found.'
+        properties:
+          type: object
+          properties:
+            reasonString:
+              type: string
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+
+    SUBSCRIBEPacket:
+      type: object
+      description: >-
+        SUBSCRIBE packet (Section 3.8). Fixed Header flags MUST be 0b0010.
+        Payload MUST contain at least one Topic Filter / Subscription
+        Options pair.
+      required: [fixedHeader, packetIdentifier, subscriptions]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        packetIdentifier:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        properties:
+          type: object
+          properties:
+            subscriptionIdentifier:
+              type: integer
+              minimum: 1
+              maximum: 268435455
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+        subscriptions:
+          type: array
+          minItems: 1
+          description: 'One or more Topic Filter / Subscription Options pairs (Section 3.8.3).'
+          items:
+            type: object
+            required: [topicFilter, options]
+            properties:
+              topicFilter:
+                type: string
+                description: Topic Filter, MAY contain `+` and `#` wildcards.
+              options:
+                type: object
+                description: 'Section 3.8.3.1. Subscription Options byte.'
+                properties:
+                  maximumQoS:
+                    type: integer
+                    enum: [0, 1, 2]
+                  noLocal:
+                    type: boolean
+                  retainAsPublished:
+                    type: boolean
+                  retainHandling:
+                    type: integer
+                    enum: [0, 1, 2]
+                    description: '0 = send retained at subscribe; 1 = send only if subscription did not exist; 2 = do not send retained.'
+
+    SUBACKPacket:
+      type: object
+      description: SUBACK packet (Section 3.9).
+      required: [fixedHeader, packetIdentifier, reasonCodes]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        packetIdentifier:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        properties:
+          type: object
+          properties:
+            reasonString:
+              type: string
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+        reasonCodes:
+          type: array
+          minItems: 1
+          description: >-
+            One Reason Code per Topic Filter in the original SUBSCRIBE
+            (Section 3.9.3). 0x00 Granted QoS 0; 0x01 Granted QoS 1;
+            0x02 Granted QoS 2; 0x80 Unspecified error; 0x83 Implementation
+            specific error; 0x87 Not authorized; 0x8F Topic Filter invalid;
+            0x91 Packet Identifier in use; 0x97 Quota exceeded; 0x9E Shared
+            Subscriptions not supported; 0xA1 Subscription Identifiers not
+            supported; 0xA2 Wildcard Subscriptions not supported.
+          items:
+            type: integer
+
+    UNSUBSCRIBEPacket:
+      type: object
+      description: 'UNSUBSCRIBE packet (Section 3.10). Fixed Header flags MUST be 0b0010.'
+      required: [fixedHeader, packetIdentifier, topicFilters]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        packetIdentifier:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        properties:
+          type: object
+          properties:
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+        topicFilters:
+          type: array
+          minItems: 1
+          items:
+            type: string
+
+    UNSUBACKPacket:
+      type: object
+      description: UNSUBACK packet (Section 3.11).
+      required: [fixedHeader, packetIdentifier, reasonCodes]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        packetIdentifier:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        properties:
+          type: object
+          properties:
+            reasonString:
+              type: string
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+        reasonCodes:
+          type: array
+          minItems: 1
+          description: >-
+            One Reason Code per Topic Filter in the original UNSUBSCRIBE.
+            0x00 Success; 0x11 No subscription existed; 0x80 Unspecified
+            error; 0x83 Implementation specific error; 0x87 Not authorized;
+            0x8F Topic Filter invalid; 0x91 Packet Identifier in use.
+          items:
+            type: integer
+
+    PINGREQPacket:
+      type: object
+      description: 'PINGREQ packet (Section 3.12). No Variable Header or Payload.'
+      required: [fixedHeader]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+
+    PINGRESPPacket:
+      type: object
+      description: 'PINGRESP packet (Section 3.13). No Variable Header or Payload.'
+      required: [fixedHeader]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+
+    DISCONNECTPacket:
+      type: object
+      description: DISCONNECT packet (Section 3.14).
+      required: [fixedHeader]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        reasonCode:
+          type: integer
+          description: >-
+            Section 3.14.2.1. 0x00 Normal disconnection; 0x04 Disconnect
+            with Will Message; 0x80 Unspecified error; 0x81 Malformed
+            Packet; 0x82 Protocol Error; 0x83 Implementation specific
+            error; 0x87 Not authorized; 0x89 Server busy; 0x8B Server
+            shutting down; 0x8D Keep Alive timeout; 0x8E Session taken
+            over; 0x8F Topic Filter invalid; 0x90 Topic Name invalid;
+            0x93 Receive Maximum exceeded; 0x94 Topic Alias invalid;
+            0x95 Packet too large; 0x96 Message rate too high; 0x97
+            Quota exceeded; 0x98 Administrative action; 0x99 Payload
+            format invalid; 0x9A Retain not supported; 0x9B QoS not
+            supported; 0x9C Use another server; 0x9D Server moved;
+            0x9E Shared Subscriptions not supported; 0x9F Connection
+            rate exceeded; 0xA0 Maximum connect time; 0xA1 Subscription
+            Identifiers not supported; 0xA2 Wildcard Subscriptions not
+            supported.
+        properties:
+          type: object
+          properties:
+            sessionExpiryInterval:
+              type: integer
+            reasonString:
+              type: string
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+            serverReference:
+              type: string
+
+    AUTHPacket:
+      type: object
+      description: AUTH packet (Section 3.15).
+      required: [fixedHeader, reasonCode]
+      properties:
+        fixedHeader:
+          $ref: '#/components/schemas/FixedHeader'
+        reasonCode:
+          type: integer
+          description: >-
+            Section 3.15.2.1. 0x00 Success; 0x18 Continue authentication;
+            0x19 Re-authenticate.
+        properties:
+          type: object
+          properties:
+            authenticationMethod:
+              type: string
+            authenticationData:
+              type: string
+              format: byte
+            reasonString:
+              type: string
+            userProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserProperty'
+
+  securitySchemes:
+    userPassword:
+      type: userPassword
+      description: >-
+        Username and Password Fields of the CONNECT packet (Section 3.1.3.5,
+        3.1.3.6). Brokers MAY implement local credential lookup, LDAP,
+        OAuth bridges, etc. The protocol itself only carries the credentials.
+    X509:
+      type: X509
+      description: >-
+        Mutual TLS using an X.509 client certificate, presented during the
+        TLS handshake before the MQTT CONNECT. Commonly used for
+        device-to-broker auth on the `secure-mqtt` server.
+    enhancedAuth:
+      type: scramSha256
+      description: >-
+        Enhanced Authentication (Section 4.12). The CONNECT specifies an
+        Authentication Method (e.g. `SCRAM-SHA-256`, `OAUTHBEARER`,
+        `GS2-KRB5`) and Authentication Data; the broker challenges via
+        AUTH packets until the exchange completes. `scramSha256` is given
+        here as a concrete example; any SASL-style method is permitted.
+
+tags:
+  - name: control-plane
+    description: Connection, authentication, liveness, and disconnect packets.
+  - name: publish
+    description: Application Message publication packets.
+  - name: subscribe
+    description: Subscription management packets.
+  - name: qos
+    description: Quality of Service acknowledgement packets.
+
+externalDocs:
+  description: MQTT Version 5.0 OASIS Standard
+  url: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
