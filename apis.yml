@@ -12,7 +12,7 @@ description: >-
   defined by the standard. The current standard is MQTT Version 5.0
   (OASIS Standard, 7 March 2019); MQTT 3.1.1 remains widely deployed.
 type: Index
-image: https://kinlane-productions.s3.amazonaws.com/apis-json/apis-json-logo.jpg
+image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/apis-json-logo.jpg
 tags:
   - MQTT
   - Messaging
