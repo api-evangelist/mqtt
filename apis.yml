@@ -84,7 +84,7 @@ common:
     url: https://github.com/mqtt
   - type: Website
     url: https://mqtt.org
-  - type: Specifications
+  - type: Specification
     url: https://mqtt.org/mqtt-specification/
   - type: OASIS Technical Committee
     url: https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=mqtt
