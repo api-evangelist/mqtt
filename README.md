@@ -1,4 +1,4 @@
-# MQTT (mqtt)
+# MQTT
 
 <!-- API-EVANGELIST-PROVENANCE:BEGIN -->
 > ### About this repository
@@ -64,4 +64,86 @@
 > Full detail: **[Where this data comes from](https://apievangelist.com/about/where-our-data-comes-from)**
 <!-- API-EVANGELIST-PROVENANCE:END -->
 
-API and integration profile for MQTT.
+MQTT (Message Queuing Telemetry Transport) is an OASIS-standard, lightweight publish/subscribe messaging transport protocol designed for constrained devices and low-bandwidth, high-latency, or unreliable networks, making it the de-facto messaging protocol for IoT and machine-to-machine (M2M) communication. MQTT is a protocol specification rather than a hosted API: clients connect over TCP/TLS (typically port 1883 or 8883) or WebSocket (8080/8081) to an MQTT broker (such as Mosquitto, HiveMQ, EMQX, or AWS IoT Core) and exchange CONNECT, PUBLISH, SUBSCRIBE, and other control packets defined by the standard. The current standard is MQTT Version 5.0 (OASIS Standard, 7 March 2019); MQTT 3.1.1 remains widely deployed.
+
+**Areas:** MQTT · Messaging · Publish Subscribe · IoT · M2M · Protocol · OASIS Standard · Telemetry · Machine-to-Machine
+
+## MQTT on APIs.io
+
+Everything profiled for MQTT is published on APIs.io rather than in this repository. Start at the provider page — **[apis.io/providers/mqtt/](https://apis.io/providers/mqtt/)** — or go straight to one of the APIs or properties below.
+
+### APIs (2)
+
+- [MQTT Version 5.0 Protocol](https://apis.io/apis/mqtt/protocol-v5/) — OASIS Standard publish/subscribe messaging protocol for IoT and M2M communication. MQTT v5.0 defines the wire format and behavior of CONNECT, PUBLISH,…
+- [MQTT Version 3.1.1 Protocol](https://apis.io/apis/mqtt/protocol-v3-1-1/) — Previous OASIS Standard version of MQTT, still widely deployed across IoT brokers, devices, and cloud platforms. MQTT 3.1.1 defines the publish/subscribe…
+
+### Published properties
+
+Each property below is a page on APIs.io carrying the machine-readable artifact and what it says.
+
+#### Security (1)
+
+Authentication, trust centre, and vulnerability disclosure.
+
+- [Mqtt Domain Security](https://apis.io/security/mqtt/mqtt-domain-security/)
+
+## Where to find this API
+
+Links to the company's own pages. This repository publishes no copy of their specifications — the canonical document is theirs and lives at the URLs below.
+
+- [Website](https://mqtt.org)
+- [Blog](https://www.oasis-open.org/feed/)
+- [GitHub](https://github.com/mqtt)
+
+## API Evangelist rating
+
+**Kin Score 16.0** — emerging · rubric 0.24.0 · scored 2026-10-17
+
+| Facet | Score |
+|---|---|
+| Discoverability | 66.1 |
+| Contract quality | 40.0 |
+| Contract governance | 0.0 |
+| Operational transparency | 2.6 |
+| Developer ergonomics | 2.4 |
+| Access clarity | 0.0 |
+
+**Agent readiness 16.8** — agent-aware
+
+| Agent-readiness dimension | Result |
+|---|---|
+| Spec Presence | yes |
+| Agentic Access | — |
+| Reversibility Documented | — |
+| MCP Server | — |
+| Auth Clarity | — |
+| Idempotency | — |
+| Error Semantics | — |
+| OpenAPI Examples | — |
+| Rate Limit Signal | — |
+| Event Surface Described | unknown |
+| Agent Skills | — |
+| Well Known Catalog | — |
+| Consent Identity | — |
+| Agent Card | — |
+| Dry Run Mode | — |
+| Delegated Identity | — |
+| Protected Resource Metadata | — |
+| Dynamic Client Registration | — |
+| Agentic Commerce | — |
+
+**Regulatory alignment 5.9** — Horizontal (data, software, accessibility, platform)
+
+The rubric is published at [github.com/api-evangelist/kin-score](https://github.com/api-evangelist/kin-score). The per-check breakdown behind these numbers — which checks were earned, partial or missed — along with score history and how this provider compares to its peers, is available at [apis.io/providers/mqtt/](https://apis.io/providers/mqtt/).
+
+## How this profile is made
+
+API Evangelist profiles a company's public API surface the way a developer would find it: the website, developer portal and documentation, the specifications it publishes, its public repositories, and its pricing, status and changelog pages. From that it derives the properties above — contracts split per API, workflows, schemas, collections, governance rules, plans and rate limits — and scores them against the published [Kin Score rubric](https://github.com/api-evangelist/kin-score).
+
+The artifacts are published on [APIs.io](https://apis.io), not in this repository. This repository is the public record for MQTT: the place to say something is wrong, missing or out of date, and to ask for a re-score or a removal.
+
+## Open an issue
+
+- **Something about this listing** — a wrong description, a missing API, a stale artifact or a question about the rating: [open an issue on this repository](https://github.com/api-evangelist/mqtt/issues/new).
+- **A new API, or one that is not in the catalog yet** — [submit it on APIs.io](https://apis.io/add/).
+- **Anything else** — [the APIs.io inbox](https://github.com/api-search/inbox/issues/new) or [info@apievangelist.com](mailto:info@apievangelist.com).
